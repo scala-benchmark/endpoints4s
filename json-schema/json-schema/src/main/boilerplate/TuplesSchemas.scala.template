@@ -1,0 +1,20 @@
+package endpoints4s.algebra
+
+/**
+  * Generated trait that provides `JsonSchema` constructors for tuples from 2 to 22 elements.
+  *
+  * @group algebras
+  */
+trait TuplesSchemas { this: JsonSchemas =>
+  [2..#
+  /**
+    * A JSON schema for a tuple of 1 elements.
+    *
+    * Tuples are represented with JSON arrays, as documented in [[https://json-schema.org/understanding-json-schema/reference/array.html\#tuple-validation]].
+    *
+    * @group operations
+    */
+  implicit def tuple1JsonSchema[[#T1#]](implicit [#schema1: JsonSchema[T1]#]): JsonSchema[([#T1#])]#
+]
+
+}

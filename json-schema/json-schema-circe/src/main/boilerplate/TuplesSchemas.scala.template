@@ -1,0 +1,19 @@
+package endpoints4s.circe
+
+import endpoints4s.algebra
+import io.circe.{Encoder, Decoder}
+
+/**
+  * @group interpreters
+  */
+trait TuplesSchemas extends algebra.TuplesSchemas { this: JsonSchemas =>
+  [2..#
+  implicit def tuple1JsonSchema[[#T1#]](implicit [#schema1: JsonSchema[T1]#]): JsonSchema[([#T1#])] = {
+    [#implicit val schema1Encoder: Encoder[T1] = schema1.encoder
+    implicit val schema1Decoder: Decoder[T1] = schema1.decoder#
+    ]
+    JsonSchema(implicitly, implicitly)
+  }#
+]
+
+}

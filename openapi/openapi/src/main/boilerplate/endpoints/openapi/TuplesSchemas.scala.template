@@ -1,0 +1,17 @@
+package endpoints4s.openapi
+
+import endpoints4s.algebra
+
+/**
+  * @group interpreters
+  */
+trait TuplesSchemas extends algebra.TuplesSchemas { this: JsonSchemas =>
+  [2..#
+  implicit def tuple1JsonSchema[[#T1#]](implicit [#schema1: JsonSchema[T1]#]): JsonSchema[([#T1#])] =
+    new JsonSchema(
+      ujsonSchemas.tuple1JsonSchema([#schema1.ujsonSchema#]),
+      DocumentedJsonSchema.Array(Right([#schema1.docs# :: ] :: Nil))
+    )#
+  ]
+
+}

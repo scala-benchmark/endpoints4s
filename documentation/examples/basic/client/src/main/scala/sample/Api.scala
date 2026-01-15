@@ -1,0 +1,14 @@
+package sample
+
+import endpoints4s.fetch._
+
+object Api
+    extends ApiAlg
+    with AssetsAlg
+    with Endpoints
+    with JsonEntitiesFromCodecs
+    with Assets
+    with thenable.Endpoints
+    with BasicAuthentication {
+  lazy val settings: EndpointsSettings = EndpointsSettings()
+}
