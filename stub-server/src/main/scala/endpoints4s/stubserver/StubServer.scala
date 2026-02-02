@@ -6,6 +6,8 @@ import java.security.SecureRandom
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 
+import sttp.client3.httpclient.HttpClientFutureBackend
+
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.ConnectionContext
 import org.apache.pekko.http.scaladsl.Http
@@ -36,6 +38,7 @@ object StubServer extends App {
 
   implicit val actorSystem: ActorSystem = ActorSystem("StubServer", conf)
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
+  implicit val scheduler: org.apache.pekko.actor.Scheduler = actorSystem.scheduler
 
   val requestHandler: HttpRequest => Future[HttpResponse] = {
     case HttpRequest(
@@ -508,6 +511,66 @@ object StubServer extends App {
           _
         ) if Set(Uri("/"), Uri("")).contains(uri.toRelative) =>
       HttpResponse(entity = "StubServer running!")
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/fetch" =>
+      //CWE-918
+      //SOURCE
+      uri.query().get("url") match {
+        case Some(url) =>
+          SsrfProxyService.fetchUrl(url).map { response =>
+            HttpResponse(status = response.status, entity = response.entity)
+          }
+        case None =>
+          Future.successful(HttpResponse(400, entity = "Missing url parameter"))
+      }
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/internal/health" =>
+      implicit val backend = HttpClientFutureBackend()
+      BackendHealthClient
+        .checkHealth("http://localhost:8080")
+        .map {
+          case Right(_)  => HttpResponse(entity = "OK")
+          case Left(err) => HttpResponse(503, entity = err)
+        }
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/cookie-sign" =>
+      val message = uri.query().get("msg").getOrElse("default")
+      val key = uri.query().get("key").getOrElse("secret").getBytes(java.nio.charset.StandardCharsets.UTF_8)
+      val signature = CryptoCookieService.signCookie(message, key)
+      HttpResponse(entity = signature)
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/token-hash" =>
+      val token = uri.query().get("token").getOrElse("session-token-123")
+      val hash = TokenHashService.hashToken(token)
+      HttpResponse(entity = hash.map(b => f"$b%02x").mkString)
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/https-fetch" =>
+      val url = uri.query().get("url").getOrElse("https://localhost:8081/")
+      val body = HttpsFetchService.fetch(url)
+      HttpResponse(entity = body)
+    case r @ HttpRequest(POST, uri, _, requestEntity, _) if uri.path.toString() == "/import-config" =>
+      Unmarshal(requestEntity)
+        .to[String]
+        .map { configXml =>
+          //CWE-611
+          //SOURCE
+          val xml = XmlConfigService.importConfig(configXml)
+          HttpResponse(entity = xml.text)
+        }
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/regex-match" =>
+      //CWE-1333
+      //SOURCE
+      val pattern = uri.query().get("pattern").getOrElse(".")
+      val text = uri.query().get("text").getOrElse("")
+      val matches = RegexMatchService.findAllMatches(pattern, text)
+      HttpResponse(entity = matches.mkString(","))
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/schedule" =>
+      //CWE-400
+      //SOURCE
+      val delayMs = uri.query().get("delay").flatMap(_.toLongOption).getOrElse(1000L)
+      ScheduleService.scheduleOnce(delayMs)
+      HttpResponse(entity = "Scheduled")
+    case HttpRequest(GET, uri, _, _, _) if uri.path.toString() == "/delete-file" =>
+      //CWE-22
+      //SOURCE
+      val filePath = uri.query().get("path").getOrElse("")
+      FileDeleteService.deleteFile(filePath)
+      HttpResponse(entity = "Deleted")
     case r: HttpRequest =>
       matcherExhausted(r)
   }

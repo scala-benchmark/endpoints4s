@@ -332,4 +332,9 @@ trait EndpointsTestApi extends algebra.Endpoints {
     ok(textResponse)
   )
 
+  val fetchProxyEndpoint = endpoint(
+    get(path / "fetch" /? qs[String]("url")),
+    ok(textResponse)
+  )
+
 }
