@@ -12,8 +12,8 @@ object CryptoCookieService {
   private val cookieSigner = new DefaultCookieSigner(secretConfig)
 
   def signCookie(message: String, key: Array[Byte]): String = {
-    //CWE-327
-    //SINK
+    
+    
     cookieSigner.sign(message, key)
   }
 }
